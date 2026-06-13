@@ -13,6 +13,7 @@ module MLX
   module DType
     NAME_TO_CODE = {
       bool:     MLX::FFI::MLX_BOOL,
+      uint16:   MLX::FFI::MLX_UINT16,
       uint32:   MLX::FFI::MLX_UINT32,
       int32:    MLX::FFI::MLX_INT32,
       int64:    MLX::FFI::MLX_INT64,
@@ -26,6 +27,7 @@ module MLX
     # Element width in bytes for the dtypes we support.
     BYTES = {
       bool:     1,
+      uint16:   2,
       uint32:   4,
       int32:    4,
       int64:    8,

@@ -6,6 +6,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-06-13
+
+### Added
+
+- Safetensors save now handles `:uint16`, `:uint32`, `:float16`,
+  `:bfloat16` — the dtypes mlx-c produces for quantized weights.
+  Quantized state from `MLX::NN::QuantizedLinear` can now be persisted
+  and reloaded, which the new `mlx-convert` CLI depends on.
+- `MLX::FFI` binds `mlx_array_data_uint16`/`uint32`/`float16`/`bfloat16`.
+- `MLX::DType` registers `:uint16` and adds the corresponding `BYTES`
+  entries.
+
 ## [0.3.0] — 2026-06-13
 
 ### Added — LoRA adapter API

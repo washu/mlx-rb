@@ -199,6 +199,10 @@ module MLX
       attach_function :mlx_array_data_int32,   [MlxArray.by_value],           :pointer
       attach_function :mlx_array_data_int64,   [MlxArray.by_value],           :pointer
       attach_function :mlx_array_data_bool,    [MlxArray.by_value],           :pointer
+      attach_function :mlx_array_data_uint16,  [MlxArray.by_value],           :pointer
+      attach_function :mlx_array_data_uint32,  [MlxArray.by_value],           :pointer
+      attach_function :mlx_array_data_float16, [MlxArray.by_value],           :pointer
+      attach_function :mlx_array_data_bfloat16, [MlxArray.by_value],          :pointer
 
       # ---- ops.h (Phase 2 additions) ----
       attach_function :mlx_negative,     [:pointer, MlxArray.by_value, MlxStream.by_value], :int

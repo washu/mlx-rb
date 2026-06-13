@@ -26,6 +26,8 @@ module MLX
         "BF16" => :bfloat16,
         "I32"  => :int32,
         "I64"  => :int64,
+        "U16"  => :uint16,
+        "U32"  => :uint32,
         "BOOL" => :bool
       }.freeze
 
@@ -126,16 +128,17 @@ module MLX
         contig = arr.send(:ensure_contiguous)
         nbytes = arr.size * MLX::DType.bytesize(arr.dtype)
         ptr = case arr.dtype
-              when :float32, :bfloat16, :float16
-                MLX::FFI.mlx_array_data_float32(contig.struct) if arr.dtype == :float32
-              when :int32 then MLX::FFI.mlx_array_data_int32(contig.struct)
-              when :int64 then MLX::FFI.mlx_array_data_int64(contig.struct)
-              when :bool  then MLX::FFI.mlx_array_data_bool(contig.struct)
+              when :float32  then MLX::FFI.mlx_array_data_float32(contig.struct)
+              when :float16  then MLX::FFI.mlx_array_data_float16(contig.struct)
+              when :bfloat16 then MLX::FFI.mlx_array_data_bfloat16(contig.struct)
+              when :int32    then MLX::FFI.mlx_array_data_int32(contig.struct)
+              when :int64    then MLX::FFI.mlx_array_data_int64(contig.struct)
+              when :uint16   then MLX::FFI.mlx_array_data_uint16(contig.struct)
+              when :uint32   then MLX::FFI.mlx_array_data_uint32(contig.struct)
+              when :bool     then MLX::FFI.mlx_array_data_bool(contig.struct)
               end
-        # For float16/bfloat16 we don't have a dedicated data extractor
-        # bound; fall back via float32 cast and re-pack — only used in tests.
         if ptr.nil?
-          raise MLX::DTypeError, "saving dtype #{arr.dtype} not yet supported (only float32/int32/int64/bool)"
+          raise MLX::DTypeError, "saving dtype #{arr.dtype} not yet supported"
         end
 
         ptr.read_bytes(nbytes)
