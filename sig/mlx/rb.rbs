@@ -1,0 +1,175 @@
+# Public RBS surface for mlx-rb 0.1.
+#
+# Coverage target is the public API a user reaches through
+# `require "mlx"`. The internal FFI module and AutoPointer machinery are
+# deliberately untyped — they're a one-pointer wrapper, and an RBS sketch
+# of them is more harmful than helpful.
+
+module MLX
+  VERSION: String
+
+  class Error < StandardError end
+  class FFIError < Error end
+  class ShapeError < Error end
+  class DTypeError < Error end
+  class TypeError < Error end
+  class PlatformError < Error end
+
+  def self.platform_supported?: () -> bool
+  def self.assert_platform_supported!: () -> void
+  def self.check!: (Integer, String) -> void
+  def self.default_device: () -> Symbol
+  def self.eval: (*untyped) -> nil
+  def self.lazy: { () -> untyped } -> untyped
+  def self.lazy?: () -> bool
+  def self.random_seed: (Integer) -> Integer
+  def self.gpu_available?: () -> bool
+
+  # Quantization top-level aliases (MLX::Quantized.*)
+  def self.quantize: (MLX::Array, ?bits: Integer, ?group_size: Integer)
+                       -> [MLX::Array, MLX::Array, MLX::Array]
+  def self.dequantize: (MLX::Array, MLX::Array, MLX::Array,
+                        ?bits: Integer, ?group_size: Integer) -> MLX::Array
+  def self.quantized_matmul: (MLX::Array, MLX::Array, MLX::Array, MLX::Array,
+                              ?bits: Integer, ?group_size: Integer,
+                              ?transpose: bool) -> MLX::Array
+  def self.quantize_model: (MLX::NN::Module,
+                            ?bits: Integer, ?group_size: Integer,
+                            ?predicate: ^(String, untyped) -> bool) -> MLX::NN::Module
+
+  class Array
+    def self.zeros: (Array[Integer], ?dtype: Symbol) -> Array
+    def self.ones: (Array[Integer], ?dtype: Symbol) -> Array
+    def self.arange: (Numeric, ?Numeric?, ?Numeric, ?dtype: Symbol) -> Array
+    def self.full: (Array[Integer], Numeric, ?dtype: Symbol) -> Array
+    def self.random_normal: (Array[Integer], ?loc: Float, ?scale: Float,
+                             ?dtype: Symbol, ?key: Array?) -> Array
+    def self.random_uniform: (Array[Integer], ?low: Float, ?high: Float,
+                              ?dtype: Symbol, ?key: Array?) -> Array
+    def self.concatenate: (::Array[Array], ?axis: Integer) -> Array
+
+    def initialize: (untyped, ?dtype: Symbol) -> void
+    def shape: () -> ::Array[Integer]
+    def ndim: () -> Integer
+    def size: () -> Integer
+    def dtype: () -> Symbol
+
+    def +: (Array | Numeric) -> Array
+    def -: (Array | Numeric) -> Array
+    def *: (Array | Numeric) -> Array
+    def /: (Array | Numeric) -> Array
+    def matmul: (Array) -> Array
+    def transpose: (?::Array[Integer]?) -> Array
+    def reshape: (::Array[Integer]) -> Array
+    def sum: (?axes: ::Array[Integer]?, ?keepdims: bool) -> Array
+    def mean: (?axes: ::Array[Integer]?, ?keepdims: bool) -> Array
+    def to_a: () -> untyped
+    def eval!: () -> Array
+  end
+
+  module DType
+    def self.to_c: (Symbol) -> Integer
+    def self.from_c: (Integer) -> Symbol
+  end
+
+  module Quantized
+    def self.quantize: (MLX::Array, ?bits: Integer, ?group_size: Integer)
+                         -> [MLX::Array, MLX::Array, MLX::Array]
+    def self.dequantize: (MLX::Array, MLX::Array, MLX::Array,
+                          ?bits: Integer, ?group_size: Integer) -> MLX::Array
+    def self.quantized_matmul: (MLX::Array, MLX::Array, MLX::Array, MLX::Array,
+                                ?bits: Integer, ?group_size: Integer,
+                                ?transpose: bool) -> MLX::Array
+  end
+
+  module NN
+    class Module
+      def initialize: () -> void
+      def forward: (*MLX::Array) -> MLX::Array
+      def call: (*MLX::Array) -> MLX::Array
+      def parameters: () -> ::Array[MLX::Array]
+      def named_parameters: (?String) -> Hash[String, MLX::Array]
+      def children: () -> ::Array[Module]
+      def freeze: () -> Module
+      def unfreeze: () -> Module
+      def frozen?: () -> bool
+      def update: (Hash[String, MLX::Array]) -> Module
+    end
+
+    class Linear < Module
+      attr_reader in_features: Integer
+      attr_reader out_features: Integer
+      attr_reader use_bias: bool
+      def initialize: (Integer, Integer, ?bias: bool) -> void
+    end
+
+    class QuantizedLinear < Module
+      attr_reader in_features: Integer
+      attr_reader out_features: Integer
+      attr_reader bits: Integer
+      attr_reader group_size: Integer
+      attr_reader use_bias: bool
+      def initialize: (Integer, Integer, ?bits: Integer, ?group_size: Integer, ?bias: bool) -> void
+      def self.from_linear: (Linear, ?bits: Integer, ?group_size: Integer) -> QuantizedLinear
+      def dequantized_weight: () -> MLX::Array
+      def named_buffers: (?String) -> Hash[String, MLX::Array]
+    end
+
+    class LayerNorm < Module
+      def initialize: (Integer, ?eps: Float) -> void
+    end
+
+    class RMSNorm < Module
+      def initialize: (Integer, ?eps: Float) -> void
+    end
+
+    class Embedding < Module
+      def initialize: (Integer, Integer) -> void
+    end
+
+    class Dropout < Module
+      def initialize: (?Float) -> void
+    end
+  end
+
+  module Optimizers
+    class Optimizer
+      def step: (Hash[String, MLX::Array]) -> void
+      def zero_grad: () -> void
+      attr_accessor lr: Float
+    end
+
+    class SGD < Optimizer
+      def initialize: (NN::Module, lr: Float, ?momentum: Float, ?weight_decay: Float) -> void
+    end
+
+    class AdamW < Optimizer
+      def initialize: (NN::Module, lr: Float, ?betas: [Float, Float], ?eps: Float, ?weight_decay: Float) -> void
+    end
+
+    class LRScheduler
+      def step: () -> void
+      def lr: () -> Float
+    end
+
+    class CosineSchedule < LRScheduler
+      def initialize: (Optimizer, total_steps: Integer, ?warmup_steps: Integer) -> void
+    end
+
+    class LinearWarmup < LRScheduler
+      def initialize: (Optimizer, warmup_steps: Integer) -> void
+    end
+  end
+
+  module IO
+    def self.load_huggingface: (String) -> NN::Module
+    def self.load_safetensors: (String) -> Hash[String, MLX::Array]
+    def self.save_safetensors: (Hash[String, MLX::Array], String, ?metadata: Hash[String, String]) -> void
+  end
+
+  module Models
+    REGISTRY: Hash[String, Class]
+    def self.register: (String, Class) -> Class
+    def self.lookup: (String) -> Class
+  end
+end

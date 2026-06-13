@@ -1,0 +1,72 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# mlx-rb — convenience CLI. Today: one subcommand, `download`.
+#
+#   mlx-rb download REPO [--revision REV] [--include PATTERN ...]
+#                        [--cache-dir DIR] [--workers N]
+#
+# Defaults match MLX::IO.load_huggingface so `mlx-rb download org/name`
+# followed by `MLX::IO.load_huggingface("org/name")` is a no-op
+# re-resolution.
+
+require "optparse"
+require "mlx"
+
+def die(msg)
+  warn msg
+  exit 1
+end
+
+case ARGV.shift
+when "download"
+  options = {
+    revision: "main",
+    include: ["*.json", "*.safetensors", "tokenizer*"],
+    workers: 8,
+    cache_dir: nil
+  }
+  parser = OptionParser.new do |o|
+    o.banner = "Usage: mlx-rb download REPO [options]"
+    o.on("--revision REV", "Branch/tag/commit (default: main)") { |v| options[:revision] = v }
+    o.on("--include PATTERN", "Add glob pattern (repeatable)") { |v| options[:include] << v }
+    o.on("--workers N", Integer, "Concurrent downloads (default: 8)") { |v| options[:workers] = v }
+    o.on("--cache-dir DIR", "Override $HF_HOME/hub") { |v| options[:cache_dir] = v }
+    o.on("-h", "--help") do
+      puts o
+      exit
+    end
+  end
+  parser.parse!
+  repo = ARGV.shift or die parser.banner
+  die "unexpected extra args: #{ARGV.inspect}" unless ARGV.empty?
+
+  progress = lambda do |path, bytes, total|
+    pct = total.positive? ? format("%.1f%%", bytes * 100.0 / total) : "?"
+    $stderr.print "\r  #{path}  #{bytes / 1024 / 1024} MB / #{total / 1024 / 1024} MB (#{pct})\e[K"
+    $stderr.puts if bytes == total
+  end
+
+  dir = MLX::IO::Hub.download(
+    repo,
+    revision: options[:revision],
+    allow_patterns: options[:include],
+    workers: options[:workers],
+    cache_dir: options[:cache_dir],
+    progress: progress
+  )
+  puts dir
+when "version", "--version", "-v", nil
+  puts "mlx-rb #{MLX::VERSION}"
+when "help", "--help", "-h"
+  puts <<~HELP
+    Usage: mlx-rb <command> [options]
+
+    Commands:
+      download REPO     Download a HuggingFace model into the local cache
+      version           Print the mlx-rb version
+      help              Show this message
+  HELP
+else
+  die "unknown command: #{$PROGRAM_NAME}"
+end

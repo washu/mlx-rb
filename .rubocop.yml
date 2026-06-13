@@ -1,0 +1,49 @@
+AllCops:
+  TargetRubyVersion: 3.1
+  NewCops: disable
+  SuggestExtensions: false
+  Exclude:
+    - "ext/mlx_c/upstream/**/*"
+    - "tmp/**/*"
+    - "bench/**/*"
+    - "examples/**/*"
+    - "vendor/**/*"
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes
+
+# Metrics are noisy for FFI-heavy code where one method is one C call.
+# We trust review for "this is too big," not lint.
+Metrics:
+  Enabled: false
+
+# `x`, `y`, `q`, `k`, `v`, `fn`, `rc` are conventional in ML / FFI code.
+Naming/MethodParameterName:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false
+Style/IfUnlessModifier:
+  Enabled: false
+Style/MultipleComparison:
+  Enabled: false
+Style/ConditionalAssignment:
+  Enabled: false
+Style/SymbolArray:
+  Enabled: false
+
+Layout/LineLength:
+  Max: 140
+Layout/HashAlignment:
+  Enabled: false
+Layout/ExtraSpacing:
+  Enabled: false
+Layout/CommentIndentation:
+  Enabled: false
+Layout/SpaceAfterComma:
+  Enabled: false
+Layout/FirstArrayElementIndentation:
+  Enabled: false

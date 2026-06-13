@@ -1,0 +1,17 @@
+/.bundle/
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/
+.idea/
+.claude/
+*.gem
+
+# rspec failure tracking
+.rspec_status
+
+# mlx-c build artifacts (rebuilt by bin/setup)
+/ext/mlx_c/upstream/build/

@@ -1,0 +1,3 @@
+[submodule "ext/mlx_c/upstream"]
+	path = ext/mlx_c/upstream
+	url = https://github.com/ml-explore/mlx-c.git
