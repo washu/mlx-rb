@@ -15,3 +15,4 @@
 
 # mlx-c build artifacts (rebuilt by bin/setup)
 /ext/mlx_c/upstream/build/
+Gemfile.lock

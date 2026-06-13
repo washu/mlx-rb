@@ -159,6 +159,7 @@ assert_load = lambda do
   require_relative "mlx/nn"
   require_relative "mlx/optimizers"
   require_relative "mlx/quantize_model"
+  require_relative "mlx/attach_lora"
   require_relative "mlx/io"
   require_relative "mlx/models"
 end

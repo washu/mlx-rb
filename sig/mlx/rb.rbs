@@ -115,6 +115,21 @@ module MLX
       def named_buffers: (?String) -> Hash[String, MLX::Array]
     end
 
+    class LoRALinear < Module
+      attr_reader in_features: Integer
+      attr_reader out_features: Integer
+      attr_reader rank: Integer
+      attr_reader alpha: Float
+      def initialize: (Integer, Integer, rank: Integer, ?alpha: Float?) -> void
+      def delta_weight: () -> MLX::Array
+    end
+
+    class LoRAQuantizedLinear < Module
+      attr_reader base: Module
+      attr_reader lora: LoRALinear
+      def initialize: (Linear | QuantizedLinear, rank: Integer, ?alpha: Float?) -> void
+    end
+
     class LayerNorm < Module
       def initialize: (Integer, ?eps: Float) -> void
     end
@@ -162,10 +177,24 @@ module MLX
   end
 
   module IO
-    def self.load_huggingface: (String) -> NN::Module
+    def self.load_huggingface: (String, ?download: bool, ?revision: String,
+                                ?allow_patterns: Array[String]) -> NN::Module
     def self.load_safetensors: (String) -> Hash[String, MLX::Array]
     def self.save_safetensors: (Hash[String, MLX::Array], String, ?metadata: Hash[String, String]) -> void
+    def self.save_adapter: (NN::Module, String) -> String
+    def self.load_adapter: (NN::Module, String) -> NN::Module
+
+    module Hub
+      def self.download: (String, ?revision: String, ?allow_patterns: Array[String]?,
+                          ?workers: Integer, ?progress: ^(String, Integer, Integer) -> void,
+                          ?cache_dir: String?) -> String
+      def self.cached_snapshot: (String, ?cache_dir: String?) -> String?
+      def self.default_cache_dir: () -> String
+    end
   end
+
+  def self.attach_lora: (NN::Module, rank: Integer, ?alpha: Float?,
+                         ?predicate: ^(String, untyped) -> bool) -> NN::Module
 
   module Models
     REGISTRY: Hash[String, Class]

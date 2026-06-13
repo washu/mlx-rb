@@ -6,6 +6,28 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-06-13
+
+### Added — LoRA adapter API
+
+- **`MLX::NN::LoRALinear(in, out, rank:, alpha:)`** — low-rank adapter
+  with the standard Kaiming-uniform A / zero B init so initial delta
+  is identically zero.
+- **`MLX::NN::LoRAQuantizedLinear`** — composite that wraps a frozen
+  `Linear` or `QuantizedLinear` with a trainable `LoRALinear`.
+  `named_parameters` exposes only the LoRA pair, so an optimizer
+  walking the model touches only the adapter.
+- **`MLX.attach_lora(module, rank:, alpha:, predicate:)`** — tree
+  walker, sibling to `quantize_model`. Common idiom:
+  `{ |path, _| path.end_with?("q_proj", "v_proj") }` for paper-style
+  attention adapters.
+- **`MLX::IO.save_adapter(model, path)` / `load_adapter(model, path)`**
+  — safetensors round-trip of *only* the LoRA pairs. ~5 KB on a tiny
+  MLP, scales linearly with rank × layer count.
+- `examples/lora_finetune.rb` — 50-step toy regression that drops loss
+  by ~900×, verifies the base weights stay unchanged, and confirms
+  the adapter round-trips to machine precision.
+
 ## [0.2.0] — 2026-06-13
 
 ### Added
