@@ -86,6 +86,6 @@ puts a.matmul(b).to_a
 [Architecture](https://github.com/washu/mlx-rb/blob/main/docs/architecture.md) ·
 [Changelog](https://github.com/washu/mlx-rb/blob/main/CHANGELOG.md)
 
-If you want orchestration on top — fine-tuning loops, adapter lifecycle,
-a CLI — those live in [Forge](https://github.com/washu/forge), which
-treats `mlx-rb` as a substrate gem and adds the workflow surface.
+If you want one-shot quantized-checkpoint production from a dense HF
+model, the sibling [`mlx-convert`](https://github.com/washu/mlx-convert)
+CLI does that in a single command.

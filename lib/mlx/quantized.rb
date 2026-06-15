@@ -26,28 +26,20 @@ module MLX
     def quantize(weights, bits: 4, group_size: 64)
       raise MLX::TypeError, "quantize expects MLX::Array" unless weights.is_a?(MLX::Array)
 
-      vec = MLX::FFI.mlx_vector_array_new
+      qw = MLX::FFI.mlx_array_new
+      scales = MLX::FFI.mlx_array_new
+      biases = MLX::FFI.mlx_array_new
       rc = MLX::FFI.mlx_quantize(
-        vec.pointer,
+        qw.pointer, scales.pointer, biases.pointer,
         weights.struct,
-        MLX::FFI.opt_int(group_size),
-        MLX::FFI.opt_int(bits),
-        AFFINE,
-        MLX::FFI.null_array,
+        Integer(group_size), Integer(bits),
         MLX.stream_struct
       )
       MLX.check!(rc, "mlx_quantize")
 
-      size = MLX::FFI.mlx_vector_array_size(vec)
-      raise MLX::FFIError, "mlx_quantize returned #{size} arrays, expected 3" unless size == 3
-
-      results = (0...size).map do |i|
-        out = MLX::FFI.mlx_array_new
-        MLX.check!(MLX::FFI.mlx_vector_array_get(out.pointer, vec, i), "mlx_vector_array_get")
-        MLX::Array.from_struct(out)
-      end
-      MLX::FFI.mlx_vector_array_free(vec)
-      results
+      [MLX::Array.from_struct(qw),
+       MLX::Array.from_struct(scales),
+       MLX::Array.from_struct(biases)]
     end
 
     # Dequantize back to a dense fp16/fp32 array.
@@ -62,11 +54,7 @@ module MLX
       rc = MLX::FFI.mlx_dequantize(
         out.pointer,
         qw.struct, scales.struct, biases.struct,
-        MLX::FFI.opt_int(group_size),
-        MLX::FFI.opt_int(bits),
-        AFFINE,
-        MLX::FFI.null_array,
-        MLX::FFI.opt_dtype(nil),
+        Integer(group_size), Integer(bits),
         MLX.stream_struct
       )
       MLX.check!(rc, "mlx_dequantize")
@@ -88,9 +76,7 @@ module MLX
         out.pointer,
         x.struct, qw.struct, scales.struct, biases.struct,
         transpose,
-        MLX::FFI.opt_int(group_size),
-        MLX::FFI.opt_int(bits),
-        AFFINE,
+        Integer(group_size), Integer(bits),
         MLX.stream_struct
       )
       MLX.check!(rc, "mlx_quantized_matmul")

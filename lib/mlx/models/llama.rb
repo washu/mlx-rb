@@ -119,14 +119,18 @@ module MLX
 
         scale = 1.0 / Math.sqrt(@head_dim)
         out = MLX::FFI.mlx_array_new
-        MLX.check!(
-          MLX::FFI.mlx_fast_scaled_dot_product_attention(
-            out.pointer, q.struct, k.struct, v.struct, scale,
-            mask || "", MLX::FFI.null_array, MLX::FFI.null_array,
-            MLX.stream_struct
-          ),
-          "mlx_fast_scaled_dot_product_attention"
-        )
+        empty_masks = MLX::FFI.mlx_vector_array_new
+        begin
+          MLX.check!(
+            MLX::FFI.mlx_fast_scaled_dot_product_attention(
+              out.pointer, q.struct, k.struct, v.struct, scale,
+              mask || "", empty_masks, MLX.stream_struct
+            ),
+            "mlx_fast_scaled_dot_product_attention"
+          )
+        ensure
+          MLX::FFI.mlx_vector_array_free(empty_masks)
+        end
         attn = MLX::Array.from_struct(out)
         attn = attn.transpose([0, 2, 1, 3]).reshape([b, t, @num_heads * @head_dim])
         @o_proj.call(attn)

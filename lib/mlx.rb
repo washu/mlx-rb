@@ -133,11 +133,11 @@ module MLX
   end
 
   def gpu_available?
-    return false unless MLX::FFI.respond_to?(:mlx_device_count)
+    return false unless MLX::FFI.respond_to?(:mlx_metal_is_available)
 
-    out = ::FFI::MemoryPointer.new(:int, 1)
-    rc = MLX::FFI.mlx_device_count(out, MLX::FFI::MLX_GPU)
-    rc.zero? && out.read_int.positive?
+    out = ::FFI::MemoryPointer.new(:bool, 1)
+    rc = MLX::FFI.mlx_metal_is_available(out)
+    rc.zero? && out.read_uint8.positive?
   rescue StandardError
     false
   end

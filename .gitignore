@@ -13,6 +13,10 @@
 # rspec failure tracking
 .rspec_status
 
-# mlx-c build artifacts (rebuilt by bin/setup)
+# Rust bridge build output (precompiled dylib ships in the platform gem)
+/ext/mlx_bridge/target/
+/ext/mlx_bridge/Cargo.lock
+
+# Legacy mlx-c build artifacts (kept for branches still using the C path)
 /ext/mlx_c/upstream/build/
 Gemfile.lock

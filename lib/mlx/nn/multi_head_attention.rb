@@ -46,14 +46,18 @@ module MLX
           end
 
         out = MLX::FFI.mlx_array_new
-        MLX.check!(
-          MLX::FFI.mlx_fast_scaled_dot_product_attention(
-            out.pointer, q.struct, k.struct, v.struct, scale,
-            mask_mode, MLX::FFI.null_array, MLX::FFI.null_array,
-            MLX.stream_struct
-          ),
-          "mlx_fast_scaled_dot_product_attention"
-        )
+        empty_masks = MLX::FFI.mlx_vector_array_new
+        begin
+          MLX.check!(
+            MLX::FFI.mlx_fast_scaled_dot_product_attention(
+              out.pointer, q.struct, k.struct, v.struct, scale,
+              mask_mode, empty_masks, MLX.stream_struct
+            ),
+            "mlx_fast_scaled_dot_product_attention"
+          )
+        ensure
+          MLX::FFI.mlx_vector_array_free(empty_masks)
+        end
         attn = MLX::Array.from_struct(out)
 
         # Back to (B, T, H, Dh) → (B, T, D)

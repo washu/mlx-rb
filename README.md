@@ -14,13 +14,13 @@ Apple's official C API for MLX. It exposes MLX's tensor operations, automatic
 differentiation, neural-network modules, optimizers, model loading, and
 quantization to Ruby.
 
-It's the substrate gem. Higher-level training, fine-tuning, adapter
-lifecycle, and CLI tooling live in [Forge](https://github.com/washu/forge)
-(or whatever the orchestration gem is called by the time you read this).
+It's a standalone gem covering tensors through quantized inference.
+The companion [`mlx-convert`](https://github.com/washu/mlx-convert)
+CLI converts dense HF checkpoints to mlx-rb's on-disk 4/8-bit format.
 
 ```
 ┌─────────────────────────────────────────┐
-│  Your Ruby app / Forge / CLI            │
+│  Your Ruby app / CLI                    │
 └──────────────────┬──────────────────────┘
                    │
 ┌──────────────────▼──────────────────────┐
@@ -28,11 +28,12 @@ lifecycle, and CLI tooling live in [Forge](https://github.com/washu/forge)
 └──────────────────┬──────────────────────┘
                    │  Ruby FFI
 ┌──────────────────▼──────────────────────┐
-│  mlx-c (Apple, C API)                   │
+│  mlx_bridge (Rust crate over mlx-rs,    │
+│  shipped prebuilt in the gem)           │
 └──────────────────┬──────────────────────┘
                    │
 ┌──────────────────▼──────────────────────┐
-│  libmlx.dylib (Apple, C++ + Metal)      │
+│  libmlx (Apple, C++ + Metal)            │
 └─────────────────────────────────────────┘
 ```
 
@@ -223,10 +224,11 @@ in 0.1.0:
 | 4 | 4-bit / 8-bit quantization, `QuantizedLinear` | Shipped |
 | 5 | Audit, docs, benchmarks, v0.1.0 release | Shipped |
 
-Post-0.1 work is sized into 0.2 (HF Hub downloader) and 0.3 (LoRA
-adapter API). See [`docs/roadmap.md`](docs/roadmap.md) for the briefs.
-Tokenizers, GPTQ/AWQ conversion, training loops, and multi-node stay
-out of scope for mlx-rb proper — those belong in Forge or external CLIs.
+0.2 added the HF Hub downloader, 0.3 added the LoRA adapter API. v0.4
+swaps the substrate to a Rust bridge over `mlx-rs` and ships a
+precompiled gem so users skip the CMake build. See
+[`docs/roadmap.md`](docs/roadmap.md) for current briefs. Tokenizers,
+GPTQ/AWQ conversion, and multi-node stay out of scope.
 
 ## Non-goals
 

@@ -1,0 +1,24 @@
+[package]
+name = "mlx_bridge"
+version = "0.4.0"
+edition = "2021"
+publish = false
+license = "MIT"
+description = "C ABI bridge between Ruby FFI and the mlx-rs crate. Built and shipped prebuilt as part of the mlx-rb gem."
+
+[lib]
+name = "mlx_bridge"
+# cdylib for Ruby FFI to load at runtime; staticlib too so future builds
+# can link this in directly if the strategy ever shifts.
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+mlx-rs = { version = "0.25", features = ["metal"] }
+mlx-sys = "0.2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

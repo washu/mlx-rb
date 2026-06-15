@@ -6,6 +6,39 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0.pre.1] — 2026-06-15
+
+### Changed — substrate swap to Rust bridge
+
+- **Replaced the mlx-c CMake build path with a Rust bridge crate.**
+  `ext/mlx_bridge/` (Cargo, depends on `mlx-rs` + `mlx-sys`) compiles
+  to a single `libmlx_bridge.dylib` that statically links MLX C++,
+  mlx-c, and Metal. The dylib re-exports the mlx-c C symbols (via a
+  generated `exports.txt` linker whitelist + a force-keep slice in
+  `build.rs`) so `lib/mlx/ffi.rb`'s existing `attach_function :mlx_*`
+  calls keep working unchanged.
+- `ext/mlx_c/` submodule removed.
+- New developer-override env var: `MLX_BRIDGE_LIB`. `MLX_C_LIB` is
+  honored as a legacy alias.
+
+### Upstream API changes picked up with this swap
+
+- `mlx_quantize` / `mlx_dequantize` / `mlx_quantized_matmul` lost their
+  `mlx_optional_int` parameters and `mode`/`global_scale` slots. The
+  Ruby wrappers in `lib/mlx/quantized.rb` were simplified accordingly.
+- `mlx_fast_scaled_dot_product_attention` consolidated its two mask
+  array slots into a single `mlx_vector_array`. Llama and
+  `MultiHeadAttention` call sites updated.
+- `mlx_device_count` is gone upstream; `MLX.gpu_available?` now uses
+  `mlx_metal_is_available`.
+
+### Not yet in this prerelease
+
+- Precompiled `arm64-darwin` platform gem. Developer checkouts still
+  need to `cargo build --release` once.
+- rb_sys / rake-compiler integration.
+- CI publishing the precompiled gem on tag push.
+
 ## [0.3.1] — 2026-06-13
 
 ### Added
@@ -54,8 +87,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `mlx-rb download REPO [--revision REV] [--include PAT] [--workers N]`.
 - `HF_TOKEN` env / `~/.cache/huggingface/token` auth, in the same
   locations `huggingface_hub` looks.
-- Roadmap doc at `docs/roadmap.md` covering 0.3 (LoRA adapter API) and
-  the items deliberately left to Forge.
+- Roadmap doc at `docs/roadmap.md` covering 0.3 (LoRA adapter API).
 
 ## [0.1.0] — 2026-06-11
 

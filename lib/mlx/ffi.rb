@@ -104,21 +104,29 @@ module MLX
       s
     end
 
-    # Locate libmlxc.dylib. MLX_C_LIB env var wins; otherwise look in the
-    # gem's vendored build tree; finally fall back to the linker's search path.
+    # Locate libmlx_bridge.dylib. Search order:
+    #   1. MLX_BRIDGE_LIB env var (developer override).
+    #   2. The precompiled binary shipped in the gem
+    #      (`ext/mlx_bridge/lib/libmlx_bridge.dylib` for arm64-darwin gems).
+    #   3. A fresh cargo-release build under
+    #      `ext/mlx_bridge/target/release/` (dev checkouts).
+    #   4. `mlx_bridge` so the dynamic loader can find it via
+    #      DYLD_LIBRARY_PATH.
+    #
+    # MLX_C_LIB is also honored as a legacy alias from the v0.3.x days
+    # so existing dev environments keep working during the transition.
     def self.candidate_lib_paths
-      env = ENV["MLX_C_LIB"]
       paths = []
-      paths << env if env && !env.empty?
+      [ENV["MLX_BRIDGE_LIB"], ENV["MLX_C_LIB"]].each do |env|
+        paths << env if env && !env.empty?
+      end
 
       gem_root = File.expand_path("../..", __dir__)
       paths.concat([
-        File.join(gem_root, "ext/mlx_c/upstream/build/libmlxc.dylib"),
-        File.join(gem_root, "ext/mlx_c/build/libmlxc.dylib"),
-        "/opt/homebrew/lib/libmlxc.dylib",
-        "/usr/local/lib/libmlxc.dylib"
+        File.join(gem_root, "ext/mlx_bridge/lib/libmlx_bridge.dylib"),
+        File.join(gem_root, "ext/mlx_bridge/target/release/libmlx_bridge.dylib")
       ])
-      paths << "mlxc" # let the loader resolve via DYLD_LIBRARY_PATH
+      paths << "mlx_bridge"
       paths
     end
 
@@ -185,7 +193,7 @@ module MLX
       attach_function :mlx_get_default_device,    [:pointer],                        :int
       attach_function :mlx_set_default_device,    [MlxDevice.by_value],              :int
       attach_function :mlx_device_get_type,       [:pointer, MlxDevice.by_value],    :int
-      attach_function :mlx_device_count,          [:pointer, :int],                  :int
+      attach_function :mlx_metal_is_available,    [:pointer],                        :int
 
       attach_function :mlx_default_cpu_stream_new, [], MlxStream.by_value
       attach_function :mlx_default_gpu_stream_new, [], MlxStream.by_value
@@ -259,7 +267,7 @@ module MLX
       attach_function :mlx_fast_rms_norm,   [:pointer, MlxArray.by_value, MlxArray.by_value, :float, MlxStream.by_value], :int
       attach_function :mlx_fast_scaled_dot_product_attention,
                       [:pointer, MlxArray.by_value, MlxArray.by_value, MlxArray.by_value,
-                       :float, :string, MlxArray.by_value, MlxArray.by_value, MlxStream.by_value], :int
+                       :float, :string, MlxVectorArray.by_value, MlxStream.by_value], :int
 
       # ---- vector.h (vector_array) ----
       attach_function :mlx_vector_array_new,           [],                                     MlxVectorArray.by_value
@@ -289,25 +297,21 @@ module MLX
       attach_function :mlx_value_and_grad, [:pointer, MlxClosure.by_value, :pointer, :size_t], :int
 
       # ---- ops.h (Phase 4: quantization) ----
-      # `mode` is "affine" (the only mode mlx-c currently supports). The
-      # null-pointer fallback for the mode string keeps these wrappers tight
-      # in Ruby; mlx-c interprets it as the default.
+      # The mlx-c API used to take mlx_optional_int for group_size/bits
+      # and an `mlx_vector_array` out-param. The newer mlx-c flattens
+      # all of those to plain ints and three out-pointers.
       attach_function :mlx_quantize,
-                      [:pointer, MlxArray.by_value,
-                       MlxOptionalInt.by_value, MlxOptionalInt.by_value,
-                       :string, MlxArray.by_value, MlxStream.by_value], :int
+                      [:pointer, :pointer, :pointer, MlxArray.by_value,
+                       :int, :int, MlxStream.by_value], :int
 
       attach_function :mlx_dequantize,
                       [:pointer, MlxArray.by_value, MlxArray.by_value, MlxArray.by_value,
-                       MlxOptionalInt.by_value, MlxOptionalInt.by_value,
-                       :string, MlxArray.by_value, MlxOptionalDtype.by_value,
-                       MlxStream.by_value], :int
+                       :int, :int, MlxStream.by_value], :int
 
       attach_function :mlx_quantized_matmul,
                       [:pointer, MlxArray.by_value, MlxArray.by_value,
                        MlxArray.by_value, MlxArray.by_value, :bool,
-                       MlxOptionalInt.by_value, MlxOptionalInt.by_value,
-                       :string, MlxStream.by_value], :int
+                       :int, :int, MlxStream.by_value], :int
     end
 
     # Releaser used by AutoPointer. The wrapped pointer is the mlx_array's
