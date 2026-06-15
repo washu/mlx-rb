@@ -24,8 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`.github/workflows/release.yml`** — on `v*` tag push, builds both
   the source gem and the precompiled `arm64-darwin` platform gem,
   smoke-tests the platform gem in a clean shell, then publishes both
-  to RubyGems via `RUBYGEMS_API_KEY` and attaches them to a GitHub
-  Release. Tag↔gemspec version mismatches abort the release.
+  to RubyGems via OIDC trusted publishing and attaches them to a
+  GitHub Release. Tag↔gemspec version mismatches abort the release.
 - **`.github/workflows/main.yml`** — rewritten for the Rust bridge.
   Sets up Rust, selects Xcode, caches `~/.cargo/registry` and the
   bridge `target/` dir, runs `rake compile` then `rspec` across

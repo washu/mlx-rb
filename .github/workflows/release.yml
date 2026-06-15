@@ -5,11 +5,18 @@ name: Release
 # gem in a clean shell, then publishes both to RubyGems and attaches
 # them to a GitHub Release.
 #
-# Required repo secret:
-#   RUBYGEMS_API_KEY  — gem owner API key, scope: push
+# Publishes via RubyGems **trusted publishing** (OIDC) — no long-lived
+# API key, MFA-compatible. One-time setup on rubygems.org:
+#   1. Sign in at https://rubygems.org/profile/oidc/api_key_roles/new
+#   2. Bind the role to:
+#        Repository:  washu/mlx-rb
+#        Workflow:    release.yml
+#        Environment: release
+#        Tag pattern: v*
+#   3. Save. The Action authenticates as that role on every release.
 #
 # To trial the workflow without publishing, set the repo variable
-# RELEASE_DRY_RUN=true; the `gem push` step is then skipped.
+# RELEASE_DRY_RUN=true; the publish step is then skipped.
 
 on:
   push:
@@ -18,10 +25,12 @@ on:
 
 permissions:
   contents: write   # GitHub Release attach
+  id-token: write   # OIDC for RubyGems trusted publishing
 
 jobs:
   release:
     runs-on: macos-14
+    environment: release
 
     steps:
       - uses: actions/checkout@v4
@@ -67,10 +76,12 @@ jobs:
           GEM_HOME=/tmp/install-check gem install --no-document pkg/mlx-rb-*-arm64-darwin.gem
           GEM_HOME=/tmp/install-check ruby -rmlx -e 'raise "load failed" unless MLX.platform_supported?; puts "VERSION=#{MLX::VERSION} device=#{MLX.default_device}"'
 
+      - name: Configure RubyGems trusted publishing
+        if: vars.RELEASE_DRY_RUN != 'true'
+        uses: rubygems/configure-rubygems-credentials@main
+
       - name: Push gems to RubyGems
         if: vars.RELEASE_DRY_RUN != 'true'
-        env:
-          GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
         run: |
           set -e
           for gem in pkg/mlx-rb-*.gem; do
