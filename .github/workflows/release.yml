@@ -15,8 +15,10 @@ name: Release
 #        Tag pattern: v*
 #   3. Save. The Action authenticates as that role on every release.
 #
-# To trial the workflow without publishing, set the repo variable
-# RELEASE_DRY_RUN=true; the publish step is then skipped.
+# Publish is opt-in. The build/smoke-test path always runs and proves
+# the gems are shippable; the rubygems push steps only fire when the
+# repo variable RELEASE_PUBLISH is set to "true". Flip it on once the
+# trusted-publisher binding is verified.
 
 on:
   push:
@@ -77,11 +79,11 @@ jobs:
           GEM_HOME=/tmp/install-check ruby -rmlx -e 'raise "load failed" unless MLX.platform_supported?; puts "VERSION=#{MLX::VERSION} device=#{MLX.default_device}"'
 
       - name: Configure RubyGems trusted publishing
-        if: vars.RELEASE_DRY_RUN != 'true'
+        if: vars.RELEASE_PUBLISH == 'true'
         uses: rubygems/configure-rubygems-credentials@main
 
       - name: Push gems to RubyGems
-        if: vars.RELEASE_DRY_RUN != 'true'
+        if: vars.RELEASE_PUBLISH == 'true'
         run: |
           set -e
           for gem in pkg/mlx-rb-*.gem; do
