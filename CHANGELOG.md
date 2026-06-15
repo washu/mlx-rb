@@ -6,6 +6,44 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`.github/workflows/release.yml`** — on `v*` tag push, builds both
+  the source gem and the precompiled `arm64-darwin` platform gem,
+  smoke-tests the platform gem in a clean shell, then publishes both
+  to RubyGems via `RUBYGEMS_API_KEY` and attaches them to a GitHub
+  Release. Tag↔gemspec version mismatches abort the release.
+- **`.github/workflows/main.yml`** — rewritten for the Rust bridge.
+  Sets up Rust, selects Xcode, caches `~/.cargo/registry` and the
+  bridge `target/` dir, runs `rake compile` then `rspec` across
+  Ruby 3.1–3.3 on `macos-14`.
+- **`rake release:gems`** — builds both flavors into `pkg/` in one
+  shot, used by the release workflow and handy for local dry runs.
+
+## [0.4.0] — 2026-06-15
+
+### Added
+
+- **Precompiled `arm64-darwin` platform gem.** Users `gem install mlx-rb`
+  with no Rust toolchain, no CMake, no Xcode CLT. The 2.9 MB gem ships
+  a single self-contained `libmlx_bridge.dylib` (MLX C++, mlx-c, and
+  the Rust bridge statically linked together).
+- **Source gem fallback.** `ext/mlx_bridge/extconf.rb` runs
+  `cargo build --release` at install time for users on the source gem.
+  Cargo + Xcode CLT required only in this path.
+- `rake compile` / `rake native_gem` tasks for local builds.
+- `bin/setup` updated to verify the Rust toolchain and call
+  `rake compile` instead of the old CMake path.
+
+### Verified end-to-end against the Rust bridge on M1 Ultra
+
+- Spec suite: 110 examples, 0 failures, 2 pending.
+- Llama-2-7B real-weights load: 12 853 MB → 3975 MB at 4-bit (3.23x)
+  with 4/4 token-id parity vs. dense (`"Hello, my name is" →
+  " Katie and I"`).
+- Platform gem installs in a fresh shell with no toolchain on PATH
+  and runs Metal matmul correctly.
+
 ## [0.4.0.pre.1] — 2026-06-15
 
 ### Changed — substrate swap to Rust bridge

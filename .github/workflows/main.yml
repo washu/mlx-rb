@@ -8,8 +8,8 @@ on:
 jobs:
   rspec:
     name: rspec / Ruby ${{ matrix.ruby }}
-    # `macos-14` is GitHub's Apple Silicon runner pool. MLX won't run on
-    # macos-13 / ubuntu — the platform check at require-time bails.
+    # macos-14 is the Apple Silicon runner pool. mlx-rb needs Metal,
+    # so there's no Linux/Intel Mac path.
     runs-on: macos-14
     strategy:
       fail-fast: false
@@ -18,11 +18,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install CMake
-        run: brew install cmake
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -30,15 +25,29 @@ jobs:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
 
-      - name: Build mlx-c
-        run: |
-          mkdir -p ext/mlx_c/upstream/build
-          cmake -S ext/mlx_c/upstream -B ext/mlx_c/upstream/build -DCMAKE_BUILD_TYPE=Release
-          cmake --build ext/mlx_c/upstream/build --parallel
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Select Xcode for Metal compiler
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ext/mlx_bridge/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('ext/mlx_bridge/Cargo.toml') }}
+
+      - name: Build the Rust bridge
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "14.0"
+          LIBCLANG_PATH: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib
+        run: bundle exec rake compile
 
       - name: Run rspec
-        # Python mlx isn't installed in CI by default — oracle-tagged
-        # specs auto-skip with a warning rather than failing.
+        # Python-mlx and live HF oracle specs auto-skip when their deps
+        # aren't installed.
         run: bundle exec rspec --format progress
 
   rubocop:

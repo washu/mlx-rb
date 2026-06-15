@@ -20,3 +20,5 @@
 # Legacy mlx-c build artifacts (kept for branches still using the C path)
 /ext/mlx_c/upstream/build/
 Gemfile.lock
+/pkg/
+/ext/mlx_bridge/lib/

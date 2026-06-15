@@ -123,7 +123,13 @@ module MLX
 
       gem_root = File.expand_path("../..", __dir__)
       paths.concat([
+        # Precompiled platform gem: dylib lives directly inside ext/mlx_bridge/lib/.
         File.join(gem_root, "ext/mlx_bridge/lib/libmlx_bridge.dylib"),
+        # Source-gem install: extconf.rb runs cargo at install time and
+        # copies the dylib into the same lib/ path. This is the same
+        # search location as above; the duplicate keeps the search
+        # robust to future layout changes.
+        # Dev checkout: cargo build --release leaves the dylib here.
         File.join(gem_root, "ext/mlx_bridge/target/release/libmlx_bridge.dylib")
       ])
       paths << "mlx_bridge"

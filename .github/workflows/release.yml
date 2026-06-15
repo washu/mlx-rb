@@ -1,0 +1,86 @@
+name: Release
+
+# Fires on v0.x.y / v0.x.y.pre.N tag push. Builds the source gem and
+# the precompiled arm64-darwin platform gem, smoke-tests the platform
+# gem in a clean shell, then publishes both to RubyGems and attaches
+# them to a GitHub Release.
+#
+# Required repo secret:
+#   RUBYGEMS_API_KEY  — gem owner API key, scope: push
+#
+# To trial the workflow without publishing, set the repo variable
+# RELEASE_DRY_RUN=true; the `gem push` step is then skipped.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # GitHub Release attach
+
+jobs:
+  release:
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify tag matches gemspec version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          gem_ver="$(ruby -r./lib/mlx/version -e 'puts MLX::VERSION')"
+          if [ "$tag" != "$gem_ver" ]; then
+            echo "::error::tag $tag does not match MLX::VERSION $gem_ver"
+            exit 1
+          fi
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Select Xcode for Metal compiler
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ext/mlx_bridge/target
+          key: cargo-release-${{ runner.os }}-${{ hashFiles('ext/mlx_bridge/Cargo.toml') }}
+
+      - name: Build both gems
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "14.0"
+          LIBCLANG_PATH: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib
+        run: bundle exec rake release:gems
+
+      - name: Smoke-test the platform gem in a clean env
+        run: |
+          mkdir -p /tmp/install-check
+          GEM_HOME=/tmp/install-check gem install --no-document pkg/mlx-rb-*-arm64-darwin.gem
+          GEM_HOME=/tmp/install-check ruby -rmlx -e 'raise "load failed" unless MLX.platform_supported?; puts "VERSION=#{MLX::VERSION} device=#{MLX.default_device}"'
+
+      - name: Push gems to RubyGems
+        if: vars.RELEASE_DRY_RUN != 'true'
+        env:
+          GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+        run: |
+          set -e
+          for gem in pkg/mlx-rb-*.gem; do
+            echo "Pushing $gem"
+            gem push "$gem"
+          done
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            pkg/mlx-rb-*.gem
+          generate_release_notes: true

@@ -69,23 +69,24 @@ at load time with a clear message on unsupported platforms.
 
 ```ruby
 # Gemfile
-gem "mlx-rb", "~> 0.1"
+gem "mlx-rb", "~> 0.4"
 ```
 
 ```bash
 bundle install
-bundle exec bin/setup    # verifies macOS arm64, builds mlx-c, runs smoke test
 ```
 
-On a fresh checkout you can also install straight from a built gem:
+That's it. The precompiled `arm64-darwin` platform gem ships a
+self-contained `libmlx_bridge.dylib` — no Rust toolchain, no CMake, no
+Xcode CLT required at install time.
 
-```bash
-gem build mlx-rb.gemspec
-gem install mlx-rb-0.1.0-arm64-darwin.gem
-```
+If RubyGems gives you the source gem instead of the platform variant
+(rare on M-series Macs), Cargo and Xcode CLT must be present so
+`extconf.rb` can build the bridge. `rustup` from
+https://rustup.rs/ is the supported path.
 
-If `libmlxc.dylib` isn't on your loader path, point `MLX_C_LIB` at it
-directly.
+For *developing* mlx-rb itself, `bin/setup` verifies the toolchain and
+runs `cargo build --release` for you.
 
 ## Three worked examples
 
