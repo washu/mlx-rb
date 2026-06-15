@@ -25,7 +25,7 @@ shape — `python3 -c` with a JSON stdin payload — so it requires Python
 mlx to be importable. Without it, the Ruby half still runs and the
 Python column shows `n/a`.
 
-## Recorded baselines (M1 Ultra, 128 GB, mlx-c Metal build)
+## Recorded baselines (M1 Ultra, 128 GB)
 
 ### Quantization memory (`bench/quantize_memory.rb`)
 

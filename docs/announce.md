@@ -7,7 +7,9 @@ a Ruby binding for Apple's [MLX](https://github.com/ml-explore/mlx)
 framework. It's the substrate I always wanted on my M-series Mac and
 couldn't find: tensors, autograd, neural-network modules, optimizers,
 HuggingFace model loading, and 4/8-bit quantization, all in
-idiomatic Ruby, running on Metal through Apple's own `mlx-c` C API.
+idiomatic Ruby, running on Metal through a precompiled Rust bridge
+that statically links MLX C++ and its kernels into a single dylib —
+ships in the gem, no toolchain at install.
 
 If you've been doing ML in Ruby on a Mac and quietly accepting that the
 tooling story is "fine, just use Python," this is the gem that flips
@@ -36,8 +38,10 @@ The whole back-half of a modern ML stack:
 - **4-bit / 8-bit quantization** with a single-line model swap and a
   Linear → QuantizedLinear walker.
 
-The full surface is around 1500 lines of Ruby on top of `mlx-c`. There
-is no C++ or Rust extension in this gem — by design.
+The full surface is around 1500 lines of Ruby on top of a small Rust
+bridge crate that re-exports mlx-c's C symbols. The platform gem ships
+a 2.9 MB precompiled `libmlx_bridge.dylib` and a `gem install` works
+on any M-series Mac with no CMake, no Cargo, no Xcode CLT required.
 
 ## Three reasons to look at it
 
@@ -69,7 +73,7 @@ These are the obvious 0.2 candidates.
 ## Try it
 
 ```bash
-# Apple Silicon, Xcode CLT, CMake, Ruby ≥ 3.1
+# Apple Silicon, Ruby ≥ 3.1 — no other toolchain at install time.
 gem install mlx-rb
 ```
 

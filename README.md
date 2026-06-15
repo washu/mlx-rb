@@ -9,10 +9,11 @@ learning framework.
 
 ## What this is
 
-`mlx-rb` is a Ruby FFI binding over [mlx-c](https://github.com/ml-explore/mlx-c),
-Apple's official C API for MLX. It exposes MLX's tensor operations, automatic
-differentiation, neural-network modules, optimizers, model loading, and
-quantization to Ruby.
+`mlx-rb` is a Ruby FFI gem over a Rust bridge crate that statically
+links [MLX C++](https://github.com/ml-explore/mlx) and Apple's Metal
+kernels into a single dylib. It exposes MLX's tensor operations,
+automatic differentiation, neural-network modules, optimizers, LoRA
+adapters, HuggingFace model loading, and 4/8-bit quantization to Ruby.
 
 It's a standalone gem covering tensors through quantized inference.
 The companion [`mlx-convert`](https://github.com/washu/mlx-convert)
@@ -57,10 +58,20 @@ those gems; it's the right substrate when your hardware is M-series.
 
 ## Requirements
 
+For the **precompiled platform gem** (the default install path on
+arm64-darwin):
+
 - **macOS** with **Apple Silicon (M1 or later)**
-- **Xcode Command Line Tools**
-- **CMake** (for building `mlx-c`)
-- **Ruby ≥ 3.3**
+- **Ruby ≥ 3.1**
+
+For the source gem (rare; only if RubyGems serves you the source
+variant instead of the platform gem) or for *developing* mlx-rb
+itself:
+
+- macOS + Apple Silicon, Ruby ≥ 3.1
+- **Xcode** (full app, not just Command Line Tools — Metal kernel
+  compiler lives there)
+- **Rust toolchain** (https://rustup.rs/)
 
 Linux and Intel Mac are not supported and won't be. The gem fails fast
 at load time with a clear message on unsupported platforms.
@@ -174,8 +185,10 @@ end-to-end script with a synthetic checkpoint is in
 - **Apple Silicon only.** No CUDA, no Linux, no Intel Mac.
 - **Inference and single-node training.** No multi-node distributed.
   See the project ADRs for the explicit non-goals.
-- **mlx-c as the boundary.** If Apple doesn't expose an op through
-  `mlx-c`, we don't expose it from Ruby. Upstream first.
+- **mlx-c as the boundary.** Even though we no longer build mlx-c
+  ourselves (the Rust bridge does), it remains the upstream C surface
+  we bind. If Apple doesn't expose an op through `mlx-c`, we don't
+  expose it from Ruby. Upstream first.
 - **No model zoo in this gem.** One reference architecture (Llama) ships
   here. Others live in separate gems
 
@@ -185,14 +198,15 @@ end-to-end script with a synthetic checkpoint is in
 mlx-rb/
 ├── lib/mlx/
 │   ├── array.rb         # MLX::Array tensor type
-│   ├── ffi.rb           # FFI declarations against mlx-c
+│   ├── ffi.rb           # FFI declarations against the Rust bridge
 │   ├── nn/              # Linear, LayerNorm, attention, etc.
 │   ├── optimizers/      # AdamW, SGD, schedulers
 │   ├── io/              # safetensors, HuggingFace loading
 │   ├── models/          # reference Llama implementation
 │   ├── quantized.rb     # 4-bit / 8-bit quantization
 │   └── quantize_model.rb # walker that swaps Linear → QuantizedLinear
-├── ext/mlx_c/           # mlx-c source (vendored)
+├── ext/mlx_bridge/      # Rust crate over mlx-rs; ships prebuilt as
+│                        # libmlx_bridge.dylib in the platform gem
 ├── bench/               # benchmark scripts vs Python mlx
 ├── sig/                 # RBS types
 └── docs/                # ADRs, architecture, announce
@@ -207,7 +221,8 @@ The load-bearing choices are written down as ADRs:
 - [`0002-module-system.md`](docs/adr/0002-module-system.md) —
   PyTorch-style modules with `#forward`
 - [`0003-binding-strategy.md`](docs/adr/0003-binding-strategy.md) —
-  Ruby FFI over `mlx-c`, no C++ or Rust extension
+  Ruby FFI over mlx-c at the symbol level, via a Rust bridge crate
+  that statically links MLX C++. *Revised in v0.4* — see the ADR.
 
 Read these before contributing. They explain why things are the way
 they are.

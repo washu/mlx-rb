@@ -8,7 +8,9 @@
 
 ## Status
 
-Accepted, 2026-06-10.
+Accepted, 2026-06-10. **Revised, 2026-06-15** — see "Revision (v0.4)"
+at the bottom. The original decision is preserved above for historical
+context; the v0.4 revision applies to current code.
 
 ## Context
 
@@ -84,3 +86,53 @@ extension of its own.
   is within 10% of Python mlx.
 
 If either milestone fails, reopen this ADR.
+
+## Revision (v0.4)
+
+The "no extension" promise survived v0.1–v0.3 but ran into a real
+install-UX problem: every user needed CMake + Xcode CLT to build
+`mlx-c` from vendored source. For a gem whose value prop is "ML on
+Apple Silicon in Ruby," forcing every consumer to install and run
+CMake at gem-install time is friction we can't justify.
+
+v0.4 swaps the build path to a Rust bridge crate
+(`ext/mlx_bridge/`) that:
+
+- depends on `mlx-rs` and `mlx-sys`,
+- statically links MLX C++, mlx-c, and the Metal `.metallib` artifacts
+  into a single `libmlx_bridge.dylib`,
+- re-exports the mlx-c C symbol surface via a linker whitelist plus a
+  force-keep slice generated at build time,
+- ships prebuilt inside the `arm64-darwin` platform gem (~2.9 MB).
+
+This *adds* the very Rust toolchain dependency the original ADR
+rejected — but only for *us* (gem maintainers), not for users. End
+users install `mlx-rb` and get a self-contained dylib with no
+toolchain on PATH. The source gem fallback runs `cargo build --release`
+at install time for developers on dev checkouts.
+
+The Ruby `MLX::FFI` surface is unchanged: every `attach_function`
+points at a mlx-c symbol the bridge re-exports. The wrapping layers
+above FFI (`MLX::Array`, `MLX::NN`, etc.) didn't change at all.
+
+### What stays true from the original ADR
+
+- The C boundary is still `lib/mlx/ffi.rb`. Adding an op is still a
+  one-line `attach_function` declaration; if mlx-c doesn't expose it,
+  we don't either.
+- We still don't have a Ruby-side C++ extension. The C++ wrapping
+  work that mlx-c does isn't repeated in our codebase.
+- Garbage-collection coordination via `FFI::AutoPointer` is unchanged.
+
+### What changed
+
+- The "no Rust toolchain" promise applies to *users* only. Maintainers
+  building a release need Rust + Xcode (full app, for the Metal
+  compiler).
+- Install UX improves dramatically: from "install CMake, install Xcode
+  CLT, wait 10+ minutes for mlx-c to build" to "`gem install mlx-rb`
+  with no toolchain on PATH at all."
+- We pick up mlx-c API changes through mlx-sys's bindgen output instead
+  of pinning a vendored mlx-c commit. v0.4 absorbed the upstream
+  reshaping of `mlx_quantize`, `mlx_fast_scaled_dot_product_attention`,
+  and the removal of `mlx_device_count` as part of the swap.
