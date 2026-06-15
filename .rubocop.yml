@@ -3,10 +3,12 @@ AllCops:
   NewCops: disable
   SuggestExtensions: false
   Exclude:
+    - "ext/mlx_bridge/target/**/*"
     - "ext/mlx_c/upstream/**/*"
     - "tmp/**/*"
     - "bench/**/*"
     - "examples/**/*"
+    - "spec/**/*"
     - "vendor/**/*"
 
 Style/StringLiterals:

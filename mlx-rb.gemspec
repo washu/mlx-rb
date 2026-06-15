@@ -40,7 +40,10 @@ Gem::Specification.new do |spec|
   # platform gems carry the precompiled dylib instead and skip cargo.
   is_platform_gem = (ENV["MLX_RB_PLATFORM"] || "ruby").start_with?("arm64-darwin")
   if is_platform_gem
-    tracked = tracked.reject { |f| f.start_with?("ext/mlx_bridge/src/", "ext/mlx_bridge/Cargo.toml", "ext/mlx_bridge/build.rs", "ext/mlx_bridge/exports.txt", "ext/mlx_bridge/extconf.rb") }
+    tracked = tracked.reject do |f|
+      f.start_with?("ext/mlx_bridge/src/", "ext/mlx_bridge/Cargo.toml", "ext/mlx_bridge/build.rs", "ext/mlx_bridge/exports.txt",
+                    "ext/mlx_bridge/extconf.rb")
+    end
     prebuilt = "ext/mlx_bridge/lib/libmlx_bridge.dylib"
     tracked << prebuilt if File.exist?(File.join(__dir__, prebuilt))
   end

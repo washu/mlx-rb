@@ -17,7 +17,7 @@ RUST_DIR = __dir__
 CARGO    = ENV["CARGO"] || "cargo"
 
 abort "mlx-rb requires macOS arm64" unless RbConfig::CONFIG["host_os"].start_with?("darwin") &&
-                                          ["arm64", "aarch64"].include?(RbConfig::CONFIG["host_cpu"])
+                                           %w[arm64 aarch64].include?(RbConfig::CONFIG["host_cpu"])
 
 unless system("#{CARGO} --version >/dev/null 2>&1")
   abort <<~MSG
@@ -31,9 +31,12 @@ end
 # Use the same env tweaks our build needs at dev-time. Users with full
 # Xcode get the right toolchain selected automatically; CommandLineTools-
 # only systems still work because mlx-sys vendors the kernel sources.
+XCODE_DEV = "/Applications/Xcode.app/Contents/Developer"
+XCODE_LIBCLANG = "#{XCODE_DEV}/Toolchains/XcodeDefault.xctoolchain/usr/lib".freeze
+
 env = ENV.to_h
-env["DEVELOPER_DIR"] ||= "/Applications/Xcode.app/Contents/Developer" if File.directory?("/Applications/Xcode.app")
-env["LIBCLANG_PATH"] ||= "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib" if File.directory?("/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib")
+env["DEVELOPER_DIR"] ||= XCODE_DEV if File.directory?(XCODE_DEV)
+env["LIBCLANG_PATH"] ||= XCODE_LIBCLANG if File.directory?(XCODE_LIBCLANG)
 
 cmd = "cd #{RUST_DIR.shellescape} && #{CARGO} build --release"
 puts "[mlx-rb] #{cmd}"
@@ -41,7 +44,7 @@ unless system(env, cmd)
   abort "[mlx-rb] cargo build failed"
 end
 
-src  = File.join(RUST_DIR, "target", "release", "libmlx_bridge.dylib")
+src = File.join(RUST_DIR, "target", "release", "libmlx_bridge.dylib")
 dest_dir = File.join(RUST_DIR, "lib")
 dest = File.join(dest_dir, "libmlx_bridge.dylib")
 abort "[mlx-rb] expected #{src} after cargo build but it's missing" unless File.exist?(src)

@@ -18,12 +18,15 @@ BRIDGE_DIR = File.expand_path("ext/mlx_bridge", __dir__)
 BRIDGE_DYLIB_SRC = File.join(BRIDGE_DIR, "target/release/libmlx_bridge.dylib")
 BRIDGE_DYLIB_DST = File.join(BRIDGE_DIR, "lib/libmlx_bridge.dylib")
 
+XCODE_DEV = "/Applications/Xcode.app/Contents/Developer"
+XCODE_LIBCLANG = "#{XCODE_DEV}/Toolchains/XcodeDefault.xctoolchain/usr/lib".freeze
+
 desc "Build the Rust bridge crate (release) and copy the dylib under ext/mlx_bridge/lib"
 task :compile do
   env = {}
-  env["DEVELOPER_DIR"] ||= "/Applications/Xcode.app/Contents/Developer" if File.directory?("/Applications/Xcode.app")
-  env["LIBCLANG_PATH"] ||= "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib" if File.directory?("/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib")
-  sh env, "cargo build --release --manifest-path #{File.join(BRIDGE_DIR, 'Cargo.toml')}"
+  env["DEVELOPER_DIR"] ||= XCODE_DEV if File.directory?(XCODE_DEV)
+  env["LIBCLANG_PATH"] ||= XCODE_LIBCLANG if File.directory?(XCODE_LIBCLANG)
+  sh env, "cargo build --release --manifest-path #{File.join(BRIDGE_DIR, "Cargo.toml")}"
   FileUtils.mkdir_p(File.dirname(BRIDGE_DYLIB_DST))
   FileUtils.cp(BRIDGE_DYLIB_SRC, BRIDGE_DYLIB_DST)
 end
@@ -45,18 +48,27 @@ end
 namespace :release do
   desc "Build both the source gem and the precompiled arm64-darwin gem into pkg/"
   task gems: :compile do
+    require "bundler"
     FileUtils.mkdir_p("pkg")
 
-    # Source gem — Cargo runs at install time on the user's machine.
-    sh "gem build mlx-rb.gemspec --output pkg/mlx-rb-#{MLX::VERSION}.gem"
-
-    # Precompiled platform gem — dylib already inside the gem.
-    ENV["MLX_RB_PLATFORM"] = "arm64-darwin"
-    begin
-      sh "gem build mlx-rb.gemspec --output pkg/mlx-rb-#{MLX::VERSION}-arm64-darwin.gem"
-    ensure
-      ENV.delete("MLX_RB_PLATFORM")
+    # gem build evaluates mlx-rb.gemspec which reads MLX_RB_PLATFORM.
+    # We invoke it outside the current `bundle exec` environment —
+    # otherwise Bundler tries to re-resolve the `path: .` source for
+    # all RUBY_PLATFORMS, which fails when the gemspec emits a single
+    # platform (arm64-darwin).
+    build_gem = lambda do |output_name, env_overrides = {}|
+      Bundler.with_unbundled_env do
+        env_overrides.each { |k, v| ENV[k] = v }
+        begin
+          sh "gem build mlx-rb.gemspec --output #{output_name}"
+        ensure
+          env_overrides.each_key { |k| ENV.delete(k) }
+        end
+      end
     end
+
+    build_gem.call("pkg/mlx-rb-#{MLX::VERSION}.gem")
+    build_gem.call("pkg/mlx-rb-#{MLX::VERSION}-arm64-darwin.gem", "MLX_RB_PLATFORM" => "arm64-darwin")
 
     puts "\nBuilt:"
     Dir["pkg/mlx-rb-#{MLX::VERSION}*.gem"].sort.each { |g| puts "  #{g}  (#{File.size(g) / 1024} KB)" }

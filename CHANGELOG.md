@@ -6,20 +6,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
-
-- **`.github/workflows/release.yml`** — on `v*` tag push, builds both
-  the source gem and the precompiled `arm64-darwin` platform gem,
-  smoke-tests the platform gem in a clean shell, then publishes both
-  to RubyGems via `RUBYGEMS_API_KEY` and attaches them to a GitHub
-  Release. Tag↔gemspec version mismatches abort the release.
-- **`.github/workflows/main.yml`** — rewritten for the Rust bridge.
-  Sets up Rust, selects Xcode, caches `~/.cargo/registry` and the
-  bridge `target/` dir, runs `rake compile` then `rspec` across
-  Ruby 3.1–3.3 on `macos-14`.
-- **`rake release:gems`** — builds both flavors into `pkg/` in one
-  shot, used by the release workflow and handy for local dry runs.
-
 ## [0.4.0] — 2026-06-15
 
 ### Added
@@ -31,9 +17,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Source gem fallback.** `ext/mlx_bridge/extconf.rb` runs
   `cargo build --release` at install time for users on the source gem.
   Cargo + Xcode CLT required only in this path.
-- `rake compile` / `rake native_gem` tasks for local builds.
+- `rake compile` / `rake native_gem` / `rake release:gems` tasks for
+  local builds.
 - `bin/setup` updated to verify the Rust toolchain and call
   `rake compile` instead of the old CMake path.
+- **`.github/workflows/release.yml`** — on `v*` tag push, builds both
+  the source gem and the precompiled `arm64-darwin` platform gem,
+  smoke-tests the platform gem in a clean shell, then publishes both
+  to RubyGems via `RUBYGEMS_API_KEY` and attaches them to a GitHub
+  Release. Tag↔gemspec version mismatches abort the release.
+- **`.github/workflows/main.yml`** — rewritten for the Rust bridge.
+  Sets up Rust, selects Xcode, caches `~/.cargo/registry` and the
+  bridge `target/` dir, runs `rake compile` then `rspec` across
+  Ruby 3.1–3.3 on `macos-14`.
 
 ### Verified end-to-end against the Rust bridge on M1 Ultra
 
