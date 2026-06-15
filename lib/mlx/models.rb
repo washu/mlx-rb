@@ -21,5 +21,7 @@ module MLX
 end
 
 require_relative "models/llama"
+require_relative "models/mistral"
+require_relative "models/qwen2"
 
 MLX::Models.register("LlamaForCausalLM", MLX::Models::Llama)

@@ -6,6 +6,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Mistral and Qwen2 model registration
+
+- **`MistralForCausalLM`** now resolves to `MLX::Models::Mistral`,
+  which is a registry alias for `Llama`. Mistral-7B ≥ v0.2 is dense-
+  attention Llama; everything (RoPE, SwiGLU MLP, RMSNorm, GQA, bias-
+  free Q/K/V/O) is identical, so the existing Llama backbone runs
+  Mistral checkpoints unchanged.
+- **`Qwen2ForCausalLM`** / **`Qwen2_5ForCausalLM`** /
+  **`Qwen3ForCausalLM`** resolve to `MLX::Models::Qwen2`. Qwen
+  differs from Llama only by adding biases to the Q/K/V projections;
+  `LlamaConfig` learned an `attention_bias` flag (also reading the
+  legacy `qkv_bias` key) and `LlamaAttention` honors it. The output
+  projection stays bias-free in both architectures.
+- `MLX::IO.load_huggingface("mistralai/Mistral-7B-Instruct-v0.3")`
+  and `"Qwen/Qwen2.5-7B-Instruct"` (or any of these models pulled
+  via `mlx-rb download`) now build the correct module tree without
+  registry surgery.
+
 ## [0.4.0] — 2026-06-15
 
 ### Added

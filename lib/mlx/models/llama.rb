@@ -15,7 +15,7 @@ module MLX
       attr_reader :hidden_size, :intermediate_size, :num_hidden_layers,
                   :num_attention_heads, :num_key_value_heads, :head_dim,
                   :rms_norm_eps, :rope_theta, :vocab_size, :tie_word_embeddings,
-                  :max_position_embeddings
+                  :max_position_embeddings, :attention_bias
 
       def initialize(hash)
         h = hash.transform_keys(&:to_s)
@@ -30,6 +30,9 @@ module MLX
         @vocab_size          = Integer(h.fetch("vocab_size"))
         @tie_word_embeddings = h.fetch("tie_word_embeddings", false) ? true : false
         @max_position_embeddings = Integer(h.fetch("max_position_embeddings", 2048))
+        # Llama uses bias-free Q/K/V projections; Qwen2 sets `attention_bias=true`.
+        # HF configs name this key `attention_bias`; some configs use `qkv_bias`.
+        @attention_bias = h["attention_bias"] || h["qkv_bias"] || false ? true : false
       end
     end
 
@@ -83,9 +86,12 @@ module MLX
         @head_dim = config.head_dim
         @rep = @num_heads / @num_kv_heads
 
-        @q_proj = MLX::NN::Linear.new(config.hidden_size, @num_heads * @head_dim, bias: false)
-        @k_proj = MLX::NN::Linear.new(config.hidden_size, @num_kv_heads * @head_dim, bias: false)
-        @v_proj = MLX::NN::Linear.new(config.hidden_size, @num_kv_heads * @head_dim, bias: false)
+        # Q/K/V projections may carry biases — Qwen2 does, Llama doesn't.
+        # The output projection is always bias-free in both architectures.
+        qkv_bias = config.respond_to?(:attention_bias) && config.attention_bias
+        @q_proj = MLX::NN::Linear.new(config.hidden_size, @num_heads * @head_dim, bias: qkv_bias)
+        @k_proj = MLX::NN::Linear.new(config.hidden_size, @num_kv_heads * @head_dim, bias: qkv_bias)
+        @v_proj = MLX::NN::Linear.new(config.hidden_size, @num_kv_heads * @head_dim, bias: qkv_bias)
         @o_proj = MLX::NN::Linear.new(@num_heads * @head_dim, config.hidden_size, bias: false)
       end
 
